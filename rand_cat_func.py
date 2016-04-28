@@ -1,22 +1,15 @@
 # -*- coding: utf-8 -*-
 '''Programme to clone galaxies from a catalogue and generate a random,
 unclustered catalogue to examine the effects of clustering on galaxy properties.
-This is the full interface version, with a text prompt to generate a catalogue
-when run as the main program. Note that this is currently set up only for flat 
-cosmologies (FlatLambdaCDM).
+This version contains only the functions of the method. A full interface is 
+provided in rand_cat_gen.
 '''
 
-import os
 import numpy as np
 import reflwin
-from astropy.cosmology import FlatLambdaCDM
-from matplotlib import pyplot
 
-
-#m_min    = 10.0          # Minimum apparent magnitude usable in the survey
-#m_max    = 19.8          # Maximum apparent magnitude detectable in the survey
-#n_clone  = 20            # The ratio of cloned-to-surveyed galaxies, typ. 400
-#Sigma    = 0.389017e11
+Phistar    = lambda z,P,Phistar_z0: Phistar_z0 * 10 ** (0.4*P*z)
+Magstar    = lambda z,Q,Magstar_z0: Magstar_z0 + Q * (z-0.1)
 
 def boolean_raw_input(text):
     variable = -1
@@ -30,203 +23,47 @@ def boolean_raw_input(text):
             print "Please answer with y/yes or n/no."
     return variable
 
-if __name__=="__main__":
-    H0     = float(raw_input("Hubble constant in kms^-1Mpc^-1: "))
-    Om0    = float(raw_input("Matter density: "))
-    print "Please wait while the cosmology is generated."
-    print "Cosmology finished."
-    cosmo  = FlatLambdaCDM(H0, Om0)
+def k_corr(z):
+    '''
+    The k-correction function for the distance modulus as a function of redshift
+    z. Redefine before using these methods.
     
-    m_min    = float(raw_input("Minimum apparent magnitude: "))
-    m_max    = float(raw_input("Maximum apparent magnitude: "))
-    sol_ang  = float(raw_input("Solid angle covered by the survey in " + \
-                               "steradians: "))
-    
-    k_text = raw_input("Type in Python function for k-correction in terms " + \
-                       "of redshift z: ")
-    e_text = raw_input("Type in Python function for e-correction in terms " + \
-                       "of redshift z: ")                   
-    k_corr = lambda z: eval(k_text)
-    e_corr = lambda z: eval(e_text)
+    Parameters
+    ----------
+    z : float
+       The redhift at which the distance modulus is measured.
 
-    abs_mag = lambda z, m, univ: m - univ.distmod(z).value - k_corr(z) - \
-                                  e_corr(z)
-    obs_mag = lambda z, M, univ: M + univ.distmod(z).value + k_corr(z) + \
-                                  e_corr(z)
-    
-    print "The generator accepts a text file with columns delimited " + \
-               "by spaces. The columns must be ordered right ascension " + \
-               "(in degrees), declination (in degrees), redshift, and " + \
-               "apparent magnitudes, followed by any arbitrary properties. " + \
-               "Alternatively, the properties can be input as separate " + \
-               "text files in column format."
+    Returns
+    -------
+    k_corr : array_like
+       The k_correction at z.
+    '''
 
-    separate = boolean_raw_input("Do you wish to input separate " + \
-                                 "text files? (y/n): ")
-                                 
-    if separate == True:
-        same_loc = boolean_raw_input("Is the Python file in the same " + \
-                                     "location as the data files? (y/n): ")
-        
-        if same_loc == True:
-            __location__ = os.path.realpath(os.path.join(os.getcwd(), \
-                           os.path.dirname(__file__)))
-            
-            angpos = boolean_raw_input("Are there angular positions (right " + \
-            "ascensions or declinations) to input? (y/n): ")
-            if angpos == True:
-                ra_loc = raw_input("Type the name of the right ascension " + \
-                                   "file: ")
-                ra = np.loadtxt(os.path.join(__location__,ra_loc), \
-                                delimiter=' ')
-            
-                dec_loc = raw_input("Type the name of the declination file: ")
-                dec = np.loadtxt(os.path.join(__location__,dec_loc), \
-                                 delimiter=' ')
-            elif angpos == False:
-                ra  = None
-                dec = None
-            
-            z_loc = raw_input("Type the name of the redshift file: ")
-            z = np.loadtxt(os.path.join(__location__,z_loc), delimiter=' ')
-            
-            absolute = boolean_raw_input("Are the input magnitudes " + \
-                                         "absolute? (y/n): ")
-            if absolute == True:
-                mag_loc = raw_input("Type the name of the absolute " + \
-                                    "magnitude file: ")
-                mag = np.loadtxt(os.path.join(__location__,mag_loc), \
-                                 delimiter=' ')
-            elif absolute == False:
-                mag_loc = raw_input("Type the name of the apparent " + \
-                                    "magnitude file: ")
-                mag = np.loadtxt(os.path.join(__location__,mag_loc), \
-                                 delimiter=' ')
-                for i in range(len(mag)):
-                    mag[i] = abs_mag(z[i],mag[i],cosmo)
-            
-            att_loc = raw_input("Type the name of the additional " + \
-                                "properties file: ")
-            att = np.loadtxt(os.path.join(__location__,att_loc), delimiter=' ')
-        
-        elif same_loc == False:
-            angpos = boolean_raw_input("Are there angular positions (right " + \
-            "ascensions or declinations) to input? (y/n): ")
-            if angpos == True:
-                ra_loc = raw_input("Type the full file path of the right " + \
-                               "ascension file: ")
-                ra = np.loadtxt(ra_loc, delimiter=' ')
-            
-                dec_loc = raw_input("Type the full file path of the " + \
-                                "declination file: ")
-                dec = np.loadtxt(dec_loc, delimiter=' ')
-            elif angpos == False:
-                ra  = None
-                dec = None
-            
-            z_loc = raw_input("Type the full file path of the redshift file: ")
-            z = np.loadtxt(z_loc, delimiter=' ')
-            
-            absolute = boolean_raw_input("Are the input magnitudes " + \
-                                         "absolute? (y/n): ")
-            if absolute == True:
-                mag_loc = raw_input("Type the full file path of the " + \
-                                    "absolute magnitude file: ")
-                mag = np.loadtxt(mag_loc, delimiter=' ')
-            elif absolute == False:
-                mag_loc = raw_input("Type the full file path of the " + \
-                                    "apparent magnitude file: ")
-                mag = np.loadtxt(mag_loc, delimiter=' ')
-                for i in range(len(mag)):
-                    mag[i] = abs_mag(z[i],mag[i],cosmo)
-            
-            att_loc = raw_input("Type the full file path of the additional " + \
-                                "properties file: ")
-            att = np.loadtxt(att_loc, delimiter=' ')
-            
-    elif separate == False:
-        same_loc = boolean_raw_input("Is the Python file in the same " + \
-                                     "location as the data file? (y/n): ")
-        
-        if same_loc == True:
-            __location__ = os.path.realpath(os.path.join(os.getcwd(), \
-                           os.path.dirname(__file__)))
-                           
-            file_loc = raw_input("Type the name of the data file: ")
-            data = np.loadtxt(os.path.join(__location__,file_loc), \
-                              delimiter=' ')
-                              
-            ra  = data[:,0]
-            dec = data[:,1]
-            z   = data[:,2]
-            mag = data[:,3]
-            att = data[:,4:int(data.shape[1])]
-            
-            for i in range(len(mag)):
-                mag[i] = abs_mag(z[i],mag[i],cosmo)
-        
-        elif same_loc == False:
-            file_loc = raw_input("Type the full file path of the data file: ")
-            data = np.loadtxt(file_loc, delimiter=' ')
-            
-            ra  = data[:,0]
-            dec = data[:,1]
-            z   = data[:,2]
-            mag = data[:,3]
-            att = data[:,4:int(data.shape[1])]  
-            
-            for i in range(len(mag)):
-                mag[i] = abs_mag(z[i],mag[i],cosmo)  
+    return 0.0 * z # Redefine as needed.
     
-       
-    n_clone  = int(raw_input("The average number of galaxy clones (20 is " + \
-                             "recommended): "))
+def e_corr(z):
+    '''
+    The e-correction function for the distance modulus as a function of redshift
+    z. Redefine before using these methods.
     
-    windowed = boolean_raw_input("Apply the Farrow window to the " + \
-                                 "redistribution? (y/n): ")
-    if windowed == True:
-        Sigma    = float(raw_input("The standard deviation of the window " + \
-                                   "in Mpc^3: "))
-    
-    zlim = boolean_raw_input("Is there a redshift limit to the " + \
-                             "survey? (y/n): ")
-    if zlim == True:
-        zlim = float(raw_input("Input the redshift limit: "))
-    elif zlim == False:
-        zlim = None
-        
-    ralim = boolean_raw_input("Are there RA limits to the survey? (y/n): ")
-    if ralim == True:
-        ralim_lo = float(raw_input("Input the lower RA limit: "))
-        ralim_hi = float(raw_input("Input the upper RA limit: "))
-        ralim = (ralim_lo,ralim_hi)
-    elif ralim == False:
-        ralim = None
-    
-    declim = boolean_raw_input("Are there declination limits to the " + \
-                               "survey? (y/n): ")
-    if declim == True:
-        declim_lo = float(raw_input("Input the lower declination limit: "))
-        declim_hi = float(raw_input("Input the upper declination limit: "))
-        declim = (declim_lo,declim_hi)
-    elif declim == False:
-        declim = None
-        
-    N  = int(raw_input("Input the number of iterations to perform (20 is " + \
-                       "sufficient): "))
-    dz = float(raw_input("Input the separation of the redshift bins the " + \
-                         " overdenstity will be measured over (0.025 is " + \
-                         "recommended): "))
-    
-    take_record = boolean_raw_input("Do you wish to obtain a record of the " + \
-                                    "catalogue at each iteration? Note that" + \
-                                    " this can be memory intensive. (y/n): ")
+    Parameters
+    ----------
+    z : float
+       The redhift at which the distance modulus is measured.
 
-Phistar_z0 = 9.4e-3 * cosmo.h ** 3 # The normalization density for the LF at z0
-Alpha      = -1.26                 # The power law coefficient for the LF
-Magstar_z0 = -20.7                 # The characteristic luminosity for the LF at z0
-Phistar    = lambda z: Phistar_z0 * 10 ** (0.4*1.8*z)
-Magstar    = lambda z: Magstar_z0 + 0.7 * (z-0.1)
+    Returns
+    -------
+    e_corr : array_like
+       The e_correction at z.
+    '''
+
+    return 0.0 * z # Redefine as needed.
+
+abs_mag = lambda z, m, univ: m - univ.distmod(z).value - k_corr(z) - \
+                              e_corr(z)
+obs_mag = lambda z, M, univ: M + univ.distmod(z).value + k_corr(z) + \
+                              e_corr(z)
+
 
 def truncate_by_mag(app_m, z, abs_m, min_app_mag, vmaxs=None, \
                     vmaxcut=(False,-23.,-22.5)):
@@ -322,11 +159,10 @@ def truncate_by_mag(app_m, z, abs_m, min_app_mag, vmaxs=None, \
         abs_m_cut = np.delete(absmag_run, order)
         vmax_cut  = np.delete(vmax_run, order)
         return app_m_cut, z_cut, abs_m_cut, vmax_cut
-
+        
 #-------------------------------------------------------------------------------
 
-def schechter(magnitude, phiStar=Phistar_z0, alpha=Alpha, mStar=Magstar_z0, \
-              z=False):
+def schechter(magnitude, phiStar, alpha, mStar, z=False):
     '''
     Returns the value of the Schechter luminosity function specified by the 
     input properties at a given absolute magnitude, in units of cubic 
@@ -338,14 +174,14 @@ def schechter(magnitude, phiStar=Phistar_z0, alpha=Alpha, mStar=Magstar_z0, \
     ----------
     magnitude : float
        An absolute magnitude value the Schechter function is evaluated at.
-    phiStar : float or lambda_like, optional
+    phiStar : float or lambda_like
        The normalisation number density for the Schechter function, in units of
        lunminous bodies per cubic megaparsec. Can be an evolving function if a 
        redshift is specified.
-    alpha : float, optional
+    alpha : float
        The unitless coefficient for the power law term for the Schechter 
        function.
-    mStar : float or lambda_like, optional
+    mStar : float or lambda_like
        The characteristic luminosity for the cutoff point of the Schechter 
        function, in units of magnitudes. Can be an evolving function if a 
        redshift is specified.
@@ -431,7 +267,7 @@ def redshift_tabulator(univ, solid_Angle=4*np.pi, min_z=0.0, max_z=1.5, N=1e5):
     return table
     
     
-def v_max(table, M, lim=0.5):
+def v_max(table, M, m_min, m_max, lim=0.5):
     '''
     Estimates the maximum volume statistic for a galaxy of absolute magnitude M
     from a table.
@@ -447,6 +283,10 @@ def v_max(table, M, lim=0.5):
        A (N,6) array of redshift values and corresponding dependants. 
     M : float
        The absolute magnitude of the galaxy.
+    m_min : float
+       The minimum apparent magnitude limit of the survey.
+    m_max : float
+       The maximum apparent magnitude limit of the survey.
     lim : float or NoneType, optional
        The redshift limit on the maximum volume. Use None if no limit is used.
 
@@ -476,7 +316,7 @@ def v_max(table, M, lim=0.5):
     return table[index_z_max][2] - table[index_z_min][2], \
            table[index_z_max][2], table[index_z_min][2]
 
-def v_max_dc(table, M, lim=0.5):
+def v_max_dc(table, M, m_min, m_max, lim=0.5):
     '''
     Estimates the density corrected maximum volume statistic from Cole (2011) 
     for a galaxy of absolute magnitude M from a table.
@@ -494,6 +334,10 @@ def v_max_dc(table, M, lim=0.5):
        including overdensity. 
     M : float
        The absolute magnitude of the galaxy.
+    m_min : float
+       The minimum apparent magnitude limit of the survey.
+    m_max : float
+       The maximum apparent magnitude limit of the survey.
     lim : float or NoneType, optional
        The redshift limit on the maximum volume. Use None if no limit is used.
 
@@ -595,8 +439,8 @@ def lumin_func_est(z, m, table, dM=0.1, absolute=True, density_corr=True):
 #-------------------------------------------------------------------------------
 
 
-def rand_cat_populator(z, M, ra, dec, attributes, table, win=False, sig=Sigma, \
-                       z_lim=0.5, ra_lim=(0.,10.), dec_lim=(-7.5,7.5)):
+def rand_cat_populator(z, M, ra, dec, attributes, table, n_clone, win=False, 
+                       sig=1e6, z_lim=0.5, ra_lim=(0.,10.), dec_lim=(-7.5,7.5)):
     '''
     Populatates a random catalogue with clones from an initial catalogue (z, M,
     ra, dec, attributes), using a redshift table defined by redshift_tabulator.
@@ -626,6 +470,8 @@ def rand_cat_populator(z, M, ra, dec, attributes, table, win=False, sig=Sigma, \
        An array of arbitrary properties values for the catalogue of galaxies.
     table : array_like
        A (N,6) array of redshift values and corresponding dependants.
+    n_clone : float, optional
+       The mean ratio of cloned galaxies to originals.
     win : bool, optional
        True if the Farrow window is to be used; False if a uniform 
        distribution is to be used.
@@ -702,9 +548,9 @@ def rand_cat_populator(z, M, ra, dec, attributes, table, win=False, sig=Sigma, \
     return np.asarray(rand_cat), n_list, orgz_list
     
     
-def overdensity_iter(z, M, ra, dec, attributes, table, N, dz=0.025, win=False, \
-                     sig=Sigma, z_lim=0.5, ra_lim=(0.,10.), dec_lim=(-7.5,7.5),\
-                     record=False):
+def overdensity_iter(z, M, ra, dec, attributes, table, N, n_clone, dz=0.025, \
+                     win=False, sig=1e6, z_lim=0.5, ra_lim=(0.,10.), \
+                     dec_lim=(-7.5,7.5),record=False):
     '''
     Populatates a random catalogue with clones from an initial catalogue using 
     rand_cat_populator for N iterations, correcting the overdensity array after 
@@ -742,6 +588,8 @@ def overdensity_iter(z, M, ra, dec, attributes, table, N, dz=0.025, win=False, \
        The separation of redshift bins over which the overdensity is measured.
     table : array_like
        A (X,6) array of redshift values and corresponding dependants.
+    n_clone : float, optional
+       The mean ratio of cloned galaxies to originals.
     win : bool, optional
        True if the Farrow window is to be used; False if a uniform 
        distribution is to be used.
@@ -821,13 +669,15 @@ def overdensity_iter(z, M, ra, dec, attributes, table, N, dz=0.025, win=False, \
         if record == True:
             run_cat, run_n, run_orgz = rand_cat_populator(z, M, ra, dec, \
                                                           attributes, \
-                                                          table_rec[-1], win, \
+                                                          table_rec[-1], \
+                                                          n_clone, win, \
                                                           sig, z_lim, ra_lim, \
                                                           dec_lim)
         elif record == False:
             run_cat, run_n, run_orgz = rand_cat_populator(z, M, ra, dec, \
                                                           attributes, \
-                                                          run_table, win, \
+                                                          run_table, \
+                                                          n_clone, win, \
                                                           sig, z_lim, ra_lim, \
                                                           dec_lim)
                                                           
@@ -882,57 +732,3 @@ def overdensity_iter(z, M, ra, dec, attributes, table, N, dz=0.025, win=False, \
 
 
 #-------------------------------------------------------------------------------
-
-
-if __name__=="__main__":
-    print "Please wait while the table is generated."
-    table = redshift_tabulator(cosmo)
-    print "Table finished."
-    
-    
-    print "Please wait while the random catalogue is generated."
-    if take_record == True:
-        run_table, rand_cat, run_delta, run_zbin, run_n, run_orgz, table_rec, \
-        cat_rec, delta_rec, zbin_rec, n_rec, orgz_rec = \
-        overdensity_iter(z, mag, ra, dec, att, table, N, dz, windowed, Sigma, \
-                         zlim, ralim, declim, take_record)
-    elif take_record == False:
-        run_table, rand_cat, run_delta, run_zbin, run_n, run_orgz = \
-        overdensity_iter(z, mag, ra, dec, att, table, N, dz, windowed, Sigma, \
-                         zlim, ralim, declim, take_record)
-    np.savetxt("rand_cat.txt", rand_cat, delimiter= ' ')
-    np.savetxt("table.txt", table, delimiter= ' ')
-    print "Random catalogue generated; saved as rand_cat.txt. Available as" + \
-           " variable rand_cat. Table saved as table.txt."
-    
-    def finalplot():
-
-        M = 200
-        n, bins   = np.histogram(rand_cat[:,0], bins = M, normed=True)
-        bincent   = (bins[1:]+bins[:-1])/2.0
-        n2, bins2 = np.histogram(z, bins = M, normed=True)
-        bincent2  = (bins2[1:]+bins2[:-1])/2.0
-
-        corrn  = sum(n)
-        corrn2 = sum(n2)
-    
-        pyplot.figure(1,figsize=(8.2677,11.6929))
-        pyplot.subplots_adjust(left=0.2)
-        pyplot.rcParams['xtick.major.pad'] = 6
-        pyplot.rcParams['ytick.major.pad'] = 6
-    
-        pyplot.subplot(1,1,1)
-        pyplot.xlabel(r'$z$',fontsize='48')
-        pyplot.ylabel(r'$N(z)$',fontsize='48')
-        pyplot.plot(bincent, n/corrn)
-        pyplot.plot(bincent2, n2/corrn2)
-        pyplot.legend(['Farrow (2015) Distribution', \
-                       'Cole (2011) Distribution', \
-                       'Analytic Distribution'], fontsize='xx-large')
-    
-        pyplot.show()
-    
-    
-        return 0.0
-        
-    finalplot()
